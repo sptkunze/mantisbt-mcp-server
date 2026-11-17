@@ -68,8 +68,21 @@ export class MantisApiError extends Error {
 // ---------------------------------------------------------------------------
 
 type ResponseObserver = (response: Response) => void;
-type Credentials = { baseUrl: string; apiKey: string; useIndexPhp?: boolean };
-type ResolvedCredentials = { baseUrl: string; apiKey: string; useIndexPhp: boolean };
+type BasicAuth = { user: string; password: string };
+type Credentials = { baseUrl: string; apiKey: string; useIndexPhp?: boolean; basicAuth?: BasicAuth };
+type ResolvedCredentials = { baseUrl: string; apiKey: string; useIndexPhp: boolean; basicAuth?: BasicAuth };
+
+/**
+ * Value of the Authorization header. Behind an HTTP Basic Auth guard (e.g. an
+ * Apache .htaccess) both credentials share the one header: "Basic <b64>, <token>".
+ * The web server evaluates the Basic part; MantisBT splits at ", " and takes the
+ * first valid API token. The token is sent as-is, without a "Bearer " prefix.
+ */
+export function buildAuthorizationHeader(apiKey: string, basicAuth?: BasicAuth): string {
+  if (!basicAuth) return apiKey;
+  const basic = Buffer.from(`${basicAuth.user}:${basicAuth.password}`, 'utf8').toString('base64');
+  return `Basic ${basic}, ${apiKey}`;
+}
 type CredentialFactory = () => Promise<Credentials>;
 
 export class MantisClient {
@@ -108,8 +121,8 @@ export class MantisClient {
 
   private async getCredentials(): Promise<ResolvedCredentials> {
     if (!this.resolvedCredentials) {
-      const { baseUrl, apiKey, useIndexPhp = false } = await this.credentialFactory!();
-      this.resolvedCredentials = { baseUrl: normalizeBaseUrl(baseUrl), apiKey, useIndexPhp };
+      const { baseUrl, apiKey, useIndexPhp = false, basicAuth } = await this.credentialFactory!();
+      this.resolvedCredentials = { baseUrl: normalizeBaseUrl(baseUrl), apiKey, useIndexPhp, basicAuth };
     }
     return this.resolvedCredentials;
   }
@@ -133,9 +146,9 @@ export class MantisClient {
   }
 
   private async headers(): Promise<Record<string, string>> {
-    const { apiKey } = await this.getCredentials();
+    const { apiKey, basicAuth } = await this.getCredentials();
     return {
-      'Authorization': apiKey,
+      'Authorization': buildAuthorizationHeader(apiKey, basicAuth),
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };

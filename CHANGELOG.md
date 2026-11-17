@@ -9,6 +9,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `get_issue_file` downloads an attachment: images inline as viewable image, other files as Base64, or with `save_dir` written to disk (never overwriting an existing file) with only path and metadata returned. `MANTIS_DOWNLOAD_DIR` restricts `save_dir`; over HTTP `save_dir` requires it.
+- `MANTIS_BASIC_AUTH_USER` / `MANTIS_BASIC_AUTH_PASSWORD` for MantisBT behind an HTTP Basic Auth guard: Basic credentials and the API token are sent together as `Authorization: Basic <b64>, <token>`.
+
 ---
 
 ## [1.18.4] – 2026-11-13

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MantisClient, MantisApiError, buildIssueViewUrl, buildNoteViewUrl } from '../src/client.js';
+import { MantisClient, MantisApiError, buildAuthorizationHeader, buildIssueViewUrl, buildNoteViewUrl } from '../src/client.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -171,6 +171,33 @@ describe('MantisClient – request headers', () => {
       expect(headers['Authorization']).toBe('myApiKey');
       expect(headers['Content-Type']).toBe('application/json');
     });
+  });
+
+  it('combines Basic Auth and API token in one Authorization header', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(makeResponse(200, '{}'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new MantisClient(async () => ({
+      baseUrl: 'https://mantis.example.com',
+      apiKey: 'tok',
+      basicAuth: { user: 'guard', password: 'pä:ss' },
+    }));
+    await client.get('issues');
+
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    const expected = Buffer.from('guard:pä:ss', 'utf8').toString('base64');
+    expect(headers['Authorization']).toBe(`Basic ${expected}, tok`);
+  });
+});
+
+describe('buildAuthorizationHeader', () => {
+  it('returns the bare token without Basic Auth', () => {
+    expect(buildAuthorizationHeader('tok')).toBe('tok');
+  });
+
+  it('allows an empty Basic Auth password', () => {
+    expect(buildAuthorizationHeader('tok', { user: 'u', password: '' }))
+      .toBe(`Basic ${Buffer.from('u:').toString('base64')}, tok`);
   });
 });
 

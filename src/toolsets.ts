@@ -36,6 +36,7 @@ export const TOOL_GROUPS: Readonly<Record<string, Toolset>> = {
   list_tags: 'links',
   // files
   upload_file: 'files',
+  get_issue_file: 'files',
   // projects
   list_projects: 'projects',
   get_project: 'projects',

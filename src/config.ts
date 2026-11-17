@@ -27,6 +27,8 @@ export interface ConnectionConfig {
   baseUrl: string;
   apiKey: string;
   useIndexPhp: boolean;
+  /** HTTP Basic Auth in front of MantisBT (MANTIS_BASIC_AUTH_USER / _PASSWORD), e.g. an Apache .htaccess guard. */
+  basicAuth?: { user: string; password: string };
 }
 
 /**
@@ -37,6 +39,8 @@ export interface StartupConfig {
   cacheDir: string;
   cacheTtl: number;
   uploadDir?: string;
+  /** MANTIS_DOWNLOAD_DIR: restricts get_issue_file's save_dir to this directory. */
+  downloadDir?: string;
   httpHost: string;
   httpPort: number;
   httpToken?: string;
@@ -132,6 +136,7 @@ function readNonCredentialConfig(): StartupConfig {
     cacheDir,
     cacheTtl,
     uploadDir: process.env.MANTIS_UPLOAD_DIR,
+    downloadDir: process.env.MANTIS_DOWNLOAD_DIR,
     httpHost: process.env.MCP_HTTP_HOST ?? '127.0.0.1',
     httpPort: parseInt(process.env.PORT ?? '3000', 10),
     httpToken: process.env.MCP_HTTP_TOKEN,
@@ -226,10 +231,15 @@ export async function getConfig(): Promise<MantisConfig> {
     );
   }
 
+  const basicAuthUser = process.env.MANTIS_BASIC_AUTH_USER ?? '';
+
   cachedConfig = {
     baseUrl: normalizeBaseUrl(baseUrl),
     apiKey,
     useIndexPhp: resolveUseIndexPhp(baseUrl),
+    ...(basicAuthUser && {
+      basicAuth: { user: basicAuthUser, password: process.env.MANTIS_BASIC_AUTH_PASSWORD ?? '' },
+    }),
     ...readNonCredentialConfig(),
   };
 

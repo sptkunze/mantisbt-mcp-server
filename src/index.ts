@@ -44,6 +44,7 @@ async function createMcpServer(transport: 'stdio' | 'http'): Promise<McpServer> 
         baseUrl: config.baseUrl,
         apiKey: config.apiKey,
         useIndexPhp: config.useIndexPhp,
+        basicAuth: config.basicAuth,
       };
     },
     (response) => versionHint.onSuccessfulResponse(response),
@@ -74,6 +75,7 @@ async function createMcpServer(transport: 'stdio' | 'http'): Promise<McpServer> 
     versionHint,
     build,
     uploadDir: startupConfig.uploadDir,
+    downloadDir: startupConfig.downloadDir,
     transport,
     disableDestructive: startupConfig.disableDestructive,
     searchIndexStatus,

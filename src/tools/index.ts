@@ -25,6 +25,7 @@ export interface ToolDeps {
   /** Version, commit and build time of this MCP server (see build-info.ts). */
   build: BuildInfo;
   uploadDir?: string;
+  downloadDir?: string;
   transport?: 'stdio' | 'http';
   /** MANTIS_DISABLE_DESTRUCTIVE: also blocks destructive parameters of non-destructive tools. */
   disableDestructive?: boolean;
@@ -41,7 +42,7 @@ export function registerAllTools(server: McpServer, deps: ToolDeps): void {
   const { client, cache } = deps;
   registerIssueTools(server, client, cache, { disableDestructive: deps.disableDestructive });
   registerNoteTools(server, client);
-  registerFileTools(server, client, deps.uploadDir, deps.transport);
+  registerFileTools(server, client, deps.uploadDir, deps.transport, deps.downloadDir);
   registerRelationshipTools(server, client);
   registerMonitorTools(server, client);
   registerProjectTools(server, client, cache);

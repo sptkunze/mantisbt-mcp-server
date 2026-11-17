@@ -53,6 +53,28 @@ describe('getConfig() – ENV variables', () => {
     expect(config.apiKey).toBe('env-api-key');
   });
 
+  it('reads Basic Auth credentials when MANTIS_BASIC_AUTH_USER is set', async () => {
+    vi.stubEnv('MANTIS_BASE_URL', 'https://mantis.example.com');
+    vi.stubEnv('MANTIS_API_KEY', 'key');
+    vi.stubEnv('MANTIS_BASIC_AUTH_USER', 'guard');
+    vi.stubEnv('MANTIS_BASIC_AUTH_PASSWORD', 'secret');
+
+    const config = await (await freshGetConfig())();
+
+    expect(config.basicAuth).toEqual({ user: 'guard', password: 'secret' });
+  });
+
+  it('leaves basicAuth unset without MANTIS_BASIC_AUTH_USER', async () => {
+    vi.stubEnv('MANTIS_BASE_URL', 'https://mantis.example.com');
+    vi.stubEnv('MANTIS_API_KEY', 'key');
+    vi.stubEnv('MANTIS_BASIC_AUTH_USER', '');
+    vi.stubEnv('MANTIS_BASIC_AUTH_PASSWORD', 'ignored');
+
+    const config = await (await freshGetConfig())();
+
+    expect(config.basicAuth).toBeUndefined();
+  });
+
   it('strips trailing slash from baseUrl', async () => {
     vi.stubEnv('MANTIS_BASE_URL', 'https://mantis.example.com/');
     vi.stubEnv('MANTIS_API_KEY', 'key');

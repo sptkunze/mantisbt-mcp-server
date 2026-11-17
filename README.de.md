@@ -72,6 +72,8 @@ npm run build
 |---|---|---|---|
 | `MANTIS_BASE_URL` | ✅ | – | Basis-URL der MantisBT-Installation. Beide Formate werden akzeptiert: `https://deine-mantis-instanz.example.com` und `https://deine-mantis-instanz.example.com/api/rest` – das `/api/rest`-Suffix wird automatisch normalisiert. |
 | `MANTIS_API_KEY` | ✅ | – | API-Token für die Authentifizierung |
+| `MANTIS_BASIC_AUTH_USER` | – | – | Benutzer für einen HTTP-Basic-Auth-Schutz vor MantisBT (z. B. Apache-`.htaccess`). Ist er gesetzt, teilen sich Basic-Zugangsdaten und API-Token einen Header: `Authorization: Basic <b64>, <token>` – der Webserver wertet den Basic-Teil aus, MantisBT nimmt den Token nach dem Komma. |
+| `MANTIS_BASIC_AUTH_PASSWORD` | – | – | Passwort zu `MANTIS_BASIC_AUTH_USER`. |
 | `MANTIS_USE_INDEX_PHP` | – | auto | Auf `true` setzen, wenn URL-Rewriting nicht verfügbar ist – REST-Anfragen verwenden dann `/api/rest/index.php/` statt `/api/rest/`. Wird automatisch erkannt, wenn `MANTIS_BASE_URL` auf `/api/rest/index.php` endet; ein explizit gesetzter Wert hat immer Vorrang. Siehe [Cookbook](docs/cookbook.de.md#installation-ohne-url-rewriting-anbinden). |
 | `MANTIS_CACHE_DIR` | – | `~/.cache/mantisbt-mcp` | Basisverzeichnis für den Metadaten-Cache. Jede MantisBT-Instanz und jedes Konto (Basis-URL plus API-Key) bekommt ein eigenes Unterverzeichnis aus Hostname und Hash; der Server gibt dessen Pfad beim Start aus |
 | `MANTIS_CACHE_TTL` | – | `3600` | Cache-Lebensdauer in Sekunden |
@@ -86,6 +88,7 @@ npm run build
 | `MANTIS_SEARCH_MODEL` | – | `Xenova/paraphrase-multilingual-MiniLM-L12-v2` | Embedding-Modell (wird beim ersten Start einmalig heruntergeladen, ~80 MB). Nach einem Wechsel baut der nächste Sync den Index von selbst neu auf. |
 | `MANTIS_SEARCH_THREADS` | – | `1` | Anzahl der ONNX-Intra-Op-Threads für das Embedding-Modell. Standard ist 1, um CPU-Sättigung auf Mehrkernsystemen und in WSL zu verhindern. Auf Rechnern mit 4 oder mehr Kernen ist `4` ein guter Wert: Ein vollständiger Neuaufbau von 7.700 Issues dauerte damit 160 s statt 377 s mit 1 Thread. Die Einstellung beschleunigt vor allem das Indexieren; eine Suchanfrage ist ein einzelner kurzer Text und profitiert kaum. Wirksam ab 1.16.0 – frühere Versionen haben die Einstellung ignoriert und immer alle Kerne genutzt. |
 | `MANTIS_UPLOAD_DIR` | – | – | Schränkt den `file_path` von `upload_file` auf dieses Verzeichnis ein (Pfad-Traversal via `../` und symbolische Links, die nach außen führen, werden blockiert; das Verzeichnis sollte für weniger vertrauenswürdige Nutzer nicht beschreibbar sein, denn ein Link, der zwischen Prüfung und Lesen ausgetauscht wird, fällt nicht auf). Im **stdio-Modus** ist `file_path` ohne diese Variable unbeschränkt – **das Setzen wird auch im stdio-Modus empfohlen** (siehe [Sicherheitshinweise](#sicherheitshinweise)); ab 2.0.0 ist `file_path` auch im stdio-Modus deaktiviert, solange sie nicht gesetzt ist. Im **HTTP-Modus** liest `file_path` aus dem Dateisystem des Servers und ist deshalb **deaktiviert, sofern diese Variable nicht gesetzt ist** – HTTP-Clients sollten stattdessen den Parameter `content` (Base64) verwenden. |
+| `MANTIS_DOWNLOAD_DIR` | – | – | Schränkt `save_dir` von `get_issue_file` auf dieses Verzeichnis ein (Pfad-Traversal via `../` und symbolische Links, die nach außen führen, werden blockiert). Im **stdio-Modus** ist `save_dir` ohne diese Variable unbeschränkt; im **HTTP-Modus** ist `save_dir` **deaktiviert, sofern diese Variable nicht gesetzt ist**. |
 | `MANTIS_TOOLSETS` | – | – (alle) | Kommagetrennte Liste der anzubietenden Tool-Gruppen: `issues`, `notes`, `links`, `files`, `projects`, `versions`, `meta`, `search` (Groß-/Kleinschreibung egal). Nicht gesetzt oder leer bedeutet alle Gruppen. Die Gruppe `search` erfordert zusätzlich `MANTIS_SEARCH_ENABLED=true`; ohne die Gruppe wird das Such-Modul gar nicht gestartet. Ein unbekannter Gruppenname stoppt den Server beim Start mit einer Meldung, die die gültigen Namen auflistet. Siehe [Angebotene Tools einschränken](#angebotene-tools-einschränken) und das [Cookbook](docs/cookbook.de.md#nur-bestimmte-tool-gruppen-anbieten). |
 | `MANTIS_DISABLE_DESTRUCTIVE` | – | `false` | Auf `true` setzen, um alle destruktiven Tools auszublenden – `delete_issue`, `delete_note`, `delete_version`, `remove_relationship`, `remove_monitor` – unabhängig von den aktiven Gruppen. Ausgeblendete Tools werden nicht aufgelistet und liefern »Tool … not found«, wenn sie aufgerufen werden. `update_issue` lehnt dann auch `remove_monitors` ab. |
 
@@ -103,7 +106,7 @@ Ausgeblendete Tools werden nicht aufgelistet und liefern »Tool … not found«,
 | `issues` | `get_issue`, `list_issues`, `create_issue`, `update_issue`, `delete_issue`¹, `get_issues`†, `list_notes`†, `list_issue_files`†, `add_monitor`†, `remove_monitor`†¹ |
 | `notes` | `add_note`, `delete_note`¹ |
 | `links` | `add_relationship`, `remove_relationship`¹, `attach_tags`, `detach_tag`, `list_tags` |
-| `files` | `upload_file` |
+| `files` | `upload_file`, `get_issue_file` |
 | `projects` | `list_projects`, `get_project`, `list_filters`, `get_project_categories`†, `get_project_users`†, `get_project_versions`†, `find_project_member`† |
 | `versions` | `create_version`, `update_version`, `delete_version`¹, `release_version`† |
 | `meta` | `get_metadata`, `get_issue_schema`, `get_config`, `get_version`, `get_current_user`, `get_metadata_full`†, `sync_metadata`†, `get_search_index_status`†, `get_issue_fields`†, `get_issue_enums`†, `get_mcp_version`†, `get_mantis_version`†, `list_languages`† |
@@ -177,6 +180,7 @@ Veraltete Tools gehören immer zur gleichen Gruppe wie ihr Ersatz – eine Grupp
 |---|---|
 | `list_issue_files` | **Veraltet:** stattdessen `get_issue` mit `select: "attachments"` verwenden – wird in 2.0.0 entfernt |
 | `upload_file` | Datei an ein Issue anhängen – bevorzugt: lokaler `file_path` (der Server liest und kodiert die Datei automatisch); Fallback: Base64-kodiertes `content` + `filename` (nur verwenden, wenn `file_path` nicht verfügbar ist) |
+| `get_issue_file` | Anhang herunterladen – Bilder inline als anzeigbares Bild, andere Dateien als Base64; mit `save_dir` wird die Datei auf die Platte geschrieben (ohne zu überschreiben) und nur ihr Pfad zurückgegeben. Die IDs von Anhängen, die mit einer Notiz hochgeladen wurden, stehen nur in deren `attachments`. |
 
 ### Beziehungen
 
